@@ -1,0 +1,106 @@
+service: BugatchiMobileDataPipeLine
+
+plugins:
+  - serverless-pseudo-parameters
+  - serverless-s3-local
+  - serverless-offline-scheduler
+  - serverless-offline
+
+custom:
+  # Import secrets.
+  private: ${file(./private.yml)}
+  default_stage: ${self:custom.private.stage}
+  stage: ${opt:stage, self:custom.default_stage}
+  serverless-offline:
+    port: 4000
+  bucketArn:
+    Fn::Join:
+    - ''
+    - - 'arn:aws:s3:::'
+      - Ref: localbucket
+      - '/*'
+  s3:
+    host: 0.0.0.0
+    port: 8080
+    directory: /tmp
+
+provider:
+  name: aws
+  stage: dev
+  region: us-east-1
+  profile: serverless-admin
+  runtime: nodejs8.10
+  environment:
+    S3_BUCKET: ${file(./config.yml):${self:custom.stage}.S3_BUCKET}
+    FTP_HOST: ${file(./config.yml):${self:custom.stage}.FTP_HOST}
+    FTP_PASSWORD: ${file(./config.yml):${self:custom.stage}.FTP_PASSWORD}
+    FILENAME: ${file(./config.yml):${self:custom.stage}.FILENAME}
+    FTP_PORT: ${file(./config.yml):${self:custom.stage}.FTP_PORT}
+    FTP_USER: ${file(./config.yml):${self:custom.stage}.FTP_USER}
+    FTP_REMOTE_PATH: ${file(./config.yml):${self:custom.stage}.FTP_REMOTE_PATH}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - "lambda:InvokeFunction"
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource: "*"
+
+functions:
+
+   transfer:
+     handler: transfer/index.handler
+     events:
+       - schedule: cron(0 23 * * ? *)
+#       The above is in UTC Time;
+#       This function will execute at every midnight UTC time
+
+resources:
+  Resources:
+
+    localbucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccessControl: PublicReadWrite
+        BucketName: ${self:provider.environment.S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, HEAD, POST, DELETE]
+            AllowedOrigins: ['*']
+            Id: myCORSRuleId1
+            MaxAge: '3600'
+
+    localbucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: localbucket
+        PolicyDocument:
+          Statement:
+          - Action:
+            - s3:*
+            Effect: Allow
+            Resource: ${self:custom.bucketArn}
+            Principal:
+              AWS:
+              - ${self:custom.private.role}
+      DependsOn:
+      - localbucket
+
+package:
+  include:
+    - transfer/**
+  exclude:
+    - node_modules/**
+    - test/**
+    - .idea
+    - docker-compose.yml
+    - README.md
+
+
+
+
+
