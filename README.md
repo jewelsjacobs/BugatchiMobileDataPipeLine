@@ -35,3 +35,16 @@ docker-compose up -d
 sls offline start 
 ```
 
+## Deploy
+
+Development:
+
+```bash
+serverless deploy --stage dev
+```
+
+Production:
+
+```bash
+serverless deploy --stage production
+```

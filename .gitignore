@@ -5,7 +5,6 @@ jspm_packages
 # Serverless directories
 .serverless
 /.envrc.local
-/getFileFromFTP.yaml
 /config.yml
 /private.yml
 /env.sh

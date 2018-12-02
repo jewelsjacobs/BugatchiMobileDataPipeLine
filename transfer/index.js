@@ -1,9 +1,19 @@
 console.log('Loading function');
+const process = require("process");
 const fs = require('fs');
 const aws = require('aws-sdk');
 const jsftp = require("jsftp");
-const s3 = new aws.S3({ apiVersion: '2006-03-01' });
-const process = require("process");
+
+let s3Config = { apiVersion: '2006-03-01' };
+
+if (process.env.STAGE === 'local') {
+  s3Config = {
+    s3ForcePathStyle: true,
+    endpoint: new aws.Endpoint('http://localhost:8080'),
+  }
+}
+
+const s3 = new aws.S3(s3Config);
 
 exports.handler = function(event, context, callback) {
     console.log('Received event:', JSON.stringify(event, null, 2));
@@ -39,13 +49,14 @@ exports.handler = function(event, context, callback) {
               callback(JSON.stringify({ hadError: had_error, status: 'error' }));
             }
             const params = {
-              Bucket: process.env.S3_BUCKET, // pass your bucket name
+              Bucket: `${process.env.S3_BUCKET}-${process.env.STAGE}`, // pass your bucket name
               Key: fileName, // file will be saved as testBucket/contacts.csv
               Body: Buffer.concat(chunks), // concatinating all chunks
               ACL: 'public-read',
               ContentEncoding: 'gzip',
               ContentType: 'application/gzip' // required
             }
+            console.log(params);
             // we are sending buffer data to s3.
             s3.upload(params, (s3Err, s3res) => {
               if (s3Err) {
