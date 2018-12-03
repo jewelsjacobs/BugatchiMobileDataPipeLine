@@ -37,7 +37,7 @@ exports.handler = function(event, context, callback) {
     ftp.get(remote, (error, socket) => {
       let chunks = [];
       if (error) {
-        callback(JSON.stringify(error));
+        callback({ error, status: 'error' });
       }
 
       socket.on("data", (data) => {
@@ -48,7 +48,7 @@ exports.handler = function(event, context, callback) {
 
       socket.on("close", (had_error) => {
         if (had_error) {
-          callback(JSON.stringify({ hadError: had_error, status: 'error' }));
+          callback({ hadError: had_error, status: 'error' });
         }
         const params = {
           Bucket: `${process.env.FTP_S3_BUCKET}-${process.env.STAGE}`, // pass your bucket name
@@ -61,9 +61,9 @@ exports.handler = function(event, context, callback) {
         // we are sending buffer data to s3.
         s3.upload(params, (s3Err, s3res) => {
           if (s3Err) {
-            callback(JSON.stringify({ s3Err, status: 'error' }));
+            callback({ s3Err, status: 'error' });
           }
-          return callback(null, JSON.stringify({ data: s3res, status: 'success', msg: 'File successfully uploaded.' }));
+          return callback(null, { data: s3res, status: 'success', msg: 'File successfully uploaded.' });
         });
 
       });
