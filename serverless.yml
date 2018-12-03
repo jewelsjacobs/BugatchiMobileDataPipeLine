@@ -46,7 +46,7 @@ provider:
   iamRoleStatements:
     - Effect: Allow
       Action:
-        - "lambda:InvokeFunction"
+        - "lambda:*"
       Resource: "*"
     - Effect: Allow
       Action:
@@ -54,15 +54,19 @@ provider:
       Resource: "*"
     - Effect: "Allow"
       Action:
-        - "xray:PutTraceSegments"
-        - "xray:PutTelemetryRecords"
+        - "xray:*"
       Resource:
         - "*"
+    - Effect: Allow
+      Action:
+        - sqs:*
+      Resource: "*"
 
 functions:
 
    transfer:
      handler: transfer/index.handler
+     timeout: 10
      deadLetter:
        sqs: transfer-dl-queue
      events:
@@ -70,6 +74,7 @@ functions:
 
    transform:
      handler: transform/index.handler
+     timeout: 10
      deadLetter:
        sqs: transform-dl-queue
      events:

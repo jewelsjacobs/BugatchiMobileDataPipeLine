@@ -1,7 +1,7 @@
 console.log('Loading function');
 const aws = require('aws-sdk');
 const awsXRay = require('aws-xray-sdk');
-const awsSdk = awsXRay.captureAWS(aws;
+const awsSdk = awsXRay.captureAWS(aws);
 
 const athena = new aws.Athena({
   apiVersion: '2017-05-18',

@@ -2,7 +2,7 @@ console.log('Loading function');
 const process = require("process");
 const aws = require('aws-sdk');
 const awsXRay = require('aws-xray-sdk');
-const awsSdk = awsXRay.captureAWS(aws;
+const awsSdk = awsXRay.captureAWS(aws);
 const jsftp = require("jsftp");
 
 let s3Config = { apiVersion: '2006-03-01' };
