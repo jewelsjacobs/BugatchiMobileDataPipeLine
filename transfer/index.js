@@ -1,7 +1,8 @@
 console.log('Loading function');
 const process = require("process");
-const fs = require('fs');
 const aws = require('aws-sdk');
+const awsXRay = require('aws-xray-sdk');
+const awsSdk = awsXRay.captureAWS(aws;
 const jsftp = require("jsftp");
 
 let s3Config = { apiVersion: '2006-03-01' };
@@ -49,7 +50,7 @@ exports.handler = function(event, context, callback) {
               callback(JSON.stringify({ hadError: had_error, status: 'error' }));
             }
             const params = {
-              Bucket: `${process.env.S3_BUCKET}-${process.env.STAGE}`, // pass your bucket name
+              Bucket: `${process.env.FTP_S3_BUCKET}-${process.env.STAGE}`, // pass your bucket name
               Key: fileName, // file will be saved as testBucket/contacts.csv
               Body: Buffer.concat(chunks), // concatinating all chunks
               ACL: 'public-read',
