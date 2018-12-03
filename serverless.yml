@@ -61,6 +61,10 @@ provider:
       Action:
         - sqs:*
       Resource: "*"
+    - Effect: Allow
+      Action:
+        - athena:*
+      Resource: "*"
 
 functions:
 

@@ -17,6 +17,7 @@ if (process.env.STAGE === 'local') {
 const s3 = new aws.S3(s3Config);
 
 exports.handler = function(event, context, callback) {
+    context.callbackWaitsForEmptyEventLoop = false;
     console.log('Received event:', JSON.stringify(event, null, 2));
     console.log('remaining time =', context.getRemainingTimeInMillis());
     // FTP Info
@@ -34,41 +35,40 @@ exports.handler = function(event, context, callback) {
      * Download from FTP to stream
      */
     ftp.get(remote, (error, socket) => {
-        let chunks = [];
-        if (error) {
-          callback(JSON.stringify(error));
+      let chunks = [];
+      if (error) {
+        callback(JSON.stringify(error));
+      }
+
+      socket.on("data", (data) => {
+        // you will get chunks here will pull all chunk to an array and later concat it.
+        console.log(chunks.length);
+        chunks.push(data);
+      });
+
+      socket.on("close", (had_error) => {
+        if (had_error) {
+          callback(JSON.stringify({ hadError: had_error, status: 'error' }));
+        }
+        const params = {
+          Bucket: `${process.env.FTP_S3_BUCKET}-${process.env.STAGE}`, // pass your bucket name
+          Key: fileName, // file will be saved as testBucket/contacts.csv
+          Body: Buffer.concat(chunks), // concatinating all chunks
+          ACL: 'public-read',
+          ContentEncoding: 'gzip',
+          ContentType: 'application/gzip' // required
+        };
+        // we are sending buffer data to s3.
+        s3.upload(params, (s3Err, s3res) => {
+          if (s3Err) {
+            callback(JSON.stringify({ s3Err, status: 'error' }));
           }
-
-          socket.on("data", (data) => {
-            // you will get chunks here will pull all chunk to an array and later concat it.
-            console.log(chunks.length);
-            chunks.push(data)
-          });
-
-          socket.on("close", (had_error) => {
-            if (had_error) {
-              callback(JSON.stringify({ hadError: had_error, status: 'error' }));
-            }
-            const params = {
-              Bucket: `${process.env.FTP_S3_BUCKET}-${process.env.STAGE}`, // pass your bucket name
-              Key: fileName, // file will be saved as testBucket/contacts.csv
-              Body: Buffer.concat(chunks), // concatinating all chunks
-              ACL: 'public-read',
-              ContentEncoding: 'gzip',
-              ContentType: 'application/gzip' // required
-            }
-            console.log(params);
-            // we are sending buffer data to s3.
-            s3.upload(params, (s3Err, s3res) => {
-              if (s3Err) {
-                callback(JSON.stringify({ s3Err, status: 'error' }));
-              }
-              callback(null, JSON.stringify({ data: s3res, status: 'success', msg: 'File successfully uploaded.' }));
-            });
-
-          });
-
-          socket.resume();
+          return callback(null, JSON.stringify({ data: s3res, status: 'success', msg: 'File successfully uploaded.' }));
         });
 
-    };
+      });
+
+      socket.resume();
+    });
+
+};
