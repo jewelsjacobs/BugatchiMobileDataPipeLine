@@ -2,6 +2,8 @@ service: BugatchiMobileDataPipeLine
 
 plugins:
   - serverless-pseudo-parameters
+  - serverless-dynamodb-local
+  - serverless-plugin-existing-s3
   - serverless-plugin-tracing
   - serverless-plugin-lambda-dead-letter
   - serverless-s3-local
@@ -9,10 +11,20 @@ plugins:
   - serverless-offline
 
 custom:
-  # Import secrets.
   private: ${file(./private.yml)}
   default_stage: ${self:custom.private.stage}
   stage: ${opt:stage, self:custom.default_stage}
+  accountId: { Ref: AWS::AccountId }
+  dynamodb:
+    stages:
+      - dev
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+      seed: false
+      #      noStart: true
+      convertEmptyValues: true
   serverless-offline:
     port: 4000
   bucketArn:
@@ -43,6 +55,7 @@ provider:
     FTP_USER: ${file(./config.yml):FTP_USER}
     FTP_REMOTE_PATH: ${file(./config.yml):FTP_REMOTE_PATH}
     STAGE: ${self:custom.stage}
+    REGION: ${self:provider.region}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -65,27 +78,91 @@ provider:
       Action:
         - athena:*
       Resource: "*"
+    - Effect: Allow
+      Action:
+        - glue:*
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:*"
+      Resource:
+        - "arn:aws:dynamodb:*:*"
+    - Effect: "Allow"
+      Action:
+        - "s3:PutBucketNotification"
+      Resource:
+        Fn::Join:
+          - ""
+          - - "arn:aws:s3:::${self:provider.environment.FTP_S3_BUCKET}-${self:custom.stage}"
 
 functions:
 
-   transfer:
-     handler: transfer/index.handler
-     timeout: 10
-     deadLetter:
-       sqs: transfer-dl-queue
-     events:
+  transfer:
+    handler: transfer/index.handler
+    timeout: 180
+    deadLetter:
+      sqs: transfer-dl-queue
+    events:
       - schedule: cron(0 23 * * ? *)
 
-   transform:
-     handler: transform/index.handler
-     timeout: 10
-     deadLetter:
-       sqs: transform-dl-queue
-     events:
-      - s3: ftp
+  transform:
+    handler: transform/index.handler
+    timeout: 360
+    deadLetter:
+      sqs: transform-dl-queue
+    events:
+      - existingS3:
+          bucket: "${self:provider.environment.FTP_S3_BUCKET}-${self:custom.stage}"
+          events:
+            - s3:ObjectCreated:*
+
+  filter:
+    handler: filter/index.handler
+    timeout: 360
+    deadLetter:
+      sqs: filter-dl-queue
+    events:
+      - schedule: cron(0 23 * * ? *)
+
+  formatted:
+    handler: import/index.handler
+    timeout: 360
+    deadLetter:
+      sqs: formatted-dl-queue
+    events:
+      - schedule: cron(0 23 * * ? *)
 
 resources:
   Resources:
+    # DynamoDB Tables
+    CategoriesTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: "categories"
+        KeySchema:
+          - AttributeName: "id"
+            KeyType: "HASH"
+        AttributeDefinitions:
+          - AttributeName: "id"
+            AttributeType: "S"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 10
+          WriteCapacityUnits: 10
+
+    BugatchiTable:
+      Type: "AWS::DynamoDB::Table"
+      Description: "Data Store for AWS AppSync Bugatchi Type"
+      Properties:
+        TableName: "bugatchi"
+        KeySchema:
+          - AttributeName: "product_id"
+            KeyType: "HASH"
+        AttributeDefinitions:
+          - AttributeName: "product_id"
+            AttributeType: "N"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 10
+          WriteCapacityUnits: 10
 
     athenaS3Bucket:
       Type: AWS::S3::Bucket
@@ -126,9 +203,18 @@ resources:
           Ref: AWS::AccountId
         SourceArn: "arn:aws:s3:::${self:provider.environment.FTP_S3_BUCKET}-${self:custom.stage}"
 
+    AthenaProductsDB:
+      Type: 'AWS::Glue::Database'
+      Properties:
+        DatabaseInput:
+          Name: 'products'
+        CatalogId:
+          Ref: AWS::AccountId
+
 package:
   include:
     - transfer/**
+    - import/**
     - transform/**
   exclude:
     - test/**
