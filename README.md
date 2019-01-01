@@ -3,8 +3,8 @@
 This is a serverless data pipeline that:
 
 - Runs nightly scheduled lambda to pull a headerless pipe delimited file from an external FTP drive to an S3 bucket
-- Runs lambda that queries Athena view to clean up data into csv file
-- Runs Data Migration Service to import csv to DynamoDB
+- Runs lambdas that run Athena queries to clean up data into csv file
+- Runs lambda to import csv to DynamoDB
 
 IMPORTANT - this won't work unless the Athena Settings have the s3 bucket defined as: `s3:\\bugatchi-athena-dev\results`. I'd like to somehow make this dynamic but I haven't figured out how.
 

@@ -4,7 +4,6 @@
   "description": "Data pipeline for Bugatchi Mobile",
   "main": "index.js",
   "dependencies": {
-    "athena-client": "^2.4.0",
     "aws-sdk": "^2.302.0",
     "aws-xray-sdk": "^2.1.0",
     "jsftp": "^2.1.3",
