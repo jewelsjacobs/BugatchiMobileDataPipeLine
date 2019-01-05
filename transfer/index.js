@@ -1,6 +1,7 @@
 console.log('Loading function');
 const process = require("process");
 const aws = require('aws-sdk');
+const awsXRay = require('aws-xray-sdk-core');
 const jsftp = require("jsftp");
 
 let s3Config = {

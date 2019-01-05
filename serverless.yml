@@ -3,6 +3,8 @@ service: BugatchiMobileDataPipeLine
 plugins:
   - serverless-pseudo-parameters
   - serverless-dynamodb-local
+  - serverless-offline-sns
+  - serverless-s3-remover
   - serverless-plugin-existing-s3
   - serverless-plugin-tracing
   - serverless-plugin-lambda-dead-letter
@@ -25,6 +27,12 @@ custom:
       seed: false
       #      noStart: true
       convertEmptyValues: true
+  serverless-offline-sns:
+    port: 4002 # a free port for the sns server to run on
+    debug: false
+    # host: 0.0.0.0 # Optional, defaults to 127.0.0.1 if not provided to serverless-offline
+    # sns-endpoint: http://127.0.0.1:4567 # Optional. Only if you want to use a custom endpoint
+    # accountId: 123456789012 # Optional
   serverless-offline:
     port: 4000
   bucketArn:
@@ -37,6 +45,14 @@ custom:
     host: 0.0.0.0
     port: 8080
     directory: /tmp
+  boolean:
+    true: true
+    false: false
+  remover:
+    prompt: ${self:custom.boolean.${opt:s3-remover-prompt, 'true'}}
+    buckets:
+      - "${self:provider.environment.ATHENA_S3_BUCKET}-${self:custom.stage}"
+      - "${self:provider.environment.FTP_S3_BUCKET}-${self:custom.stage}"
 
 provider:
   name: aws
@@ -46,6 +62,7 @@ provider:
   runtime: nodejs8.10
   tracing: true
   environment:
+    AWS_ACCOUNT_ID: ${self:custom.accountId}
     ATHENA_S3_BUCKET: ${file(./config.yml):ATHENA_S3_BUCKET}
     FTP_S3_BUCKET: ${file(./config.yml):FTP_S3_BUCKET}
     FTP_HOST: ${file(./config.yml):${self:custom.stage}.FTP_HOST}
@@ -56,20 +73,21 @@ provider:
     FTP_REMOTE_PATH: ${file(./config.yml):FTP_REMOTE_PATH}
     STAGE: ${self:custom.stage}
     REGION: ${self:provider.region}
+    MAX_RECORDS_PER_BATCH: ${file(./config.yml):MAX_RECORDS_PER_BATCH}
+    MAX_CONCURRENT_BATCHES: ${file(./config.yml):MAX_CONCURRENT_BATCHES}
   iamRoleStatements:
     - Effect: Allow
       Action:
-        - "lambda:*"
+        - lambda:*
       Resource: "*"
     - Effect: Allow
       Action:
         - s3:*
       Resource: "*"
-    - Effect: "Allow"
+    - Effect: Allow
       Action:
-        - "xray:*"
-      Resource:
-        - "*"
+        - xray:*
+      Resource: "*"
     - Effect: Allow
       Action:
         - sqs:*
@@ -82,18 +100,15 @@ provider:
       Action:
         - glue:*
       Resource: "*"
-    - Effect: "Allow"
+    - Effect: Allow
       Action:
-        - "dynamodb:*"
-      Resource:
-        - "arn:aws:dynamodb:*:*"
-    - Effect: "Allow"
+        - dynamodb:*
+      Resource: "*"
+    - Effect: Allow
       Action:
-        - "s3:PutBucketNotification"
-      Resource:
-        Fn::Join:
-          - ""
-          - - "arn:aws:s3:::${self:provider.environment.FTP_S3_BUCKET}-${self:custom.stage}"
+        - sns:*
+      Resource: "*"
+
 
 functions:
 
@@ -118,19 +133,27 @@ functions:
 
   filter:
     handler: filter/index.handler
-    timeout: 360
+    timeout: 720
     deadLetter:
       sqs: filter-dl-queue
     events:
-      - schedule: cron(0 23 * * ? *)
+      - sns: transformQueryId
 
   formatted:
-    handler: import/index.handler
+    handler: formatted/index.handler
     timeout: 360
     deadLetter:
       sqs: formatted-dl-queue
     events:
-      - schedule: cron(0 23 * * ? *)
+      - sns: filterQueryId
+
+  import:
+    handler: import/index.handler
+    timeout: 720
+    deadLetter:
+      sqs: import-dl-queue
+    events:
+      - sns: formattedQueryId
 
 resources:
   Resources:
@@ -162,9 +185,9 @@ resources:
             AttributeType: "N"
         ProvisionedThroughput:
           ReadCapacityUnits: 10
-          WriteCapacityUnits: 10
+          WriteCapacityUnits: 60
 
-    athenaS3Bucket:
+    S3BucketAthena:
       Type: AWS::S3::Bucket
       Properties:
         AccessControl: PublicReadWrite
@@ -190,19 +213,6 @@ resources:
               Id: myCORSRuleId1
               MaxAge: '3600'
 
-    TransformLambdaPermissionFtpS3:
-      Type: "AWS::Lambda::Permission"
-      Properties:
-        FunctionName:
-          "Fn::GetAtt":
-            - TransformLambdaFunction
-            - Arn
-        Principal: "s3.amazonaws.com"
-        Action: "lambda:InvokeFunction"
-        SourceAccount:
-          Ref: AWS::AccountId
-        SourceArn: "arn:aws:s3:::${self:provider.environment.FTP_S3_BUCKET}-${self:custom.stage}"
-
     AthenaProductsDB:
       Type: 'AWS::Glue::Database'
       Properties:
@@ -213,6 +223,7 @@ resources:
 
 package:
   include:
+    - filter/**
     - transfer/**
     - import/**
     - transform/**
