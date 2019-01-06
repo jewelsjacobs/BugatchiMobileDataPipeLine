@@ -20,31 +20,34 @@ if (process.env.STAGE === 'local') {
 const sns = new aws.SNS(snsConfig);
 
 let data;
-let bugatchiQuery = `CREATE OR REPLACE VIEW bugatchi AS
-SELECT
-  "product_id"
-    , "begin_date"
-    , "currency"
-    , "discount_type"
-    , "long_description"
-    , "manufacturer"
-    , "manufacturer_part_number"
-    , "name"
-    , "pixel"
-    , "primary_category"
-    , "product_url"
-    , "productimage_url"
-    , "retail_price"
-    , "sale_price"
-    , "secondary_category"
-    , "shipping_availability"
-    , "shipping_information"
-    , "short_description"
-    , "sku_number"
-    , "upc"
-FROM
-  products.manufacturers
-WHERE (("product_id" <> 'HDR') AND ("manufacturer" = 'Bugatchi'))`;
+let bugatchiQuery = `CREATE OR REPLACE VIEW bugatchi AS SELECT "product_id" ,
+         "begin_date" ,
+         "manufacturer_part_number" ,
+         "name" ,
+         "pixel" ,
+         "product_url" ,
+         "productimage_url" ,
+         "retail_price" ,
+         "sale_price" ,
+         "short_description" as "description",
+         "sku_number" ,
+         "upc" ,
+         split_part("secondary_category", '~~', 1) AS "category" , 
+         split_part("secondary_category", '~~', 2) AS "subcategory" , 
+         replace("shipping_information", ':', ' ') AS "shipping_info",
+         Coalesce(
+         try(date_parse("begin_date", '%Y-%m-%d %H:%i:%s')),
+         try(date_parse("begin_date", '%Y-%m-%d')),
+         try(CAST("begin_date" AS timestamp))
+       )  as "date_timestamp"
+FROM products.manufacturers
+WHERE "product_id" <> 'HDR'
+        AND "manufacturer" = 'Bugatchi'
+        AND "shipping_availability" = 'in-stock'
+        AND "currency" = 'USD'
+        AND "discount_type" = 'amount'
+        AND "primary_category" = 'Apparel & Accessories'
+        AND "shipping_availability" = 'in-stock'`;
 
 exports.handler = async (event, context) => {
   console.log('Received event:', JSON.stringify(event, null, 2));

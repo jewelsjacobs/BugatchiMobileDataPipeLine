@@ -50,25 +50,20 @@ const MAX_CONCURRENT_BATCHES = parseInt(process.env.MAX_CONCURRENT_BATCHES, 10);
 // A whitelist of the CSV columns to ingest.
 const CSV_KEYS = [
   "product_id",
-  "begin_date",
-  "currency",
-  "discount_type",
-  "long_description",
-  "manufacturer",
-  "manufacturer_part_number",
   "name",
-  "pixel",
-  "primary_category",
-  "product_url",
-  "productimage_url",
+  "category",
+  "subcategory",
   "retail_price",
   "sale_price",
-  "secondary_category",
-  "shipping_availability",
-  "shipping_information",
-  "short_description",
+  "description",
+  "manufacturer_part_number",
+  "pixel",
+  "product_url",
+  "productimage_url",
   "sku_number",
-  "upc"
+  "upc",
+  "shipping_info",
+  "date_timestamp"
 ];
 
 let retryCount = 0;
@@ -131,12 +126,13 @@ function buildRequestParams(batch) {
   params.RequestItems['bugatchi'] = batch.map(obj => {
     return obj.map(innerObj => {
       let item = {};
+      const numberFeilds = ["product_id", "manufacturer_part_number"];
       CSV_KEYS.forEach((keyName) => {
         if (innerObj[keyName] && innerObj[keyName].length > 0) {
-          if (keyName !== "product_id") {
-            item[keyName] = innerObj[keyName]
-          } else {
+          if (numberFeilds.indexOf(keyName) !== -1) {
             item[keyName] = parseInt(innerObj[keyName], 10)
+          } else {
+            item[keyName] = innerObj[keyName]
           }
         }
       });
@@ -169,7 +165,7 @@ function addData(params) {
         setTimeout(() => addData(retry), delay);
       }
       retryCount = 0;
-      console.log("Batch response data:", JSON.stringify(data, null, 2));
+      console.log("Data inserted:", JSON.stringify(data, null, 2));
     }
   });
 }

@@ -19,7 +19,23 @@ if (process.env.STAGE === 'local') {
 const sns = new aws.SNS(snsConfig);
 
 let data;
-let manufacturersQuery = `SELECT * FROM bugatchi`;
+let manufacturersQuery = `SELECT "product_id",
+         "name",
+         "category",
+         "subcategory",
+         "retail_price",
+         "sale_price",
+         "description",
+         "manufacturer_part_number",
+         "pixel",
+         "product_url",
+         "productimage_url",
+         "sku_number",
+         "upc",
+         "shipping_info",
+         "date_timestamp"
+FROM "products"."bugatchi"
+WHERE "date_timestamp" >= CAST('2018-06-19 00:00:00.0' as timestamp)`;
 
 exports.handler = async (event, context) => {
   console.log('Received event:', JSON.stringify(event, null, 2));

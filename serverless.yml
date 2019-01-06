@@ -10,6 +10,7 @@ plugins:
   - serverless-plugin-lambda-dead-letter
   - serverless-s3-local
   - serverless-offline-scheduler
+  - serverless-dynamodb-autoscaling
   - serverless-offline
 
 custom:
@@ -17,6 +18,18 @@ custom:
   default_stage: ${self:custom.private.stage}
   stage: ${opt:stage, self:custom.default_stage}
   accountId: { Ref: AWS::AccountId }
+  capacities:
+    - table: BugatchiTable  # DynamoDB Resource
+      index:              # List or single index name
+        - CategoryIndex
+      read:
+        minimum: 25        # Minimum read capacity
+        maximum: 1000     # Maximum read capacity
+        usage: 0.75       # Targeted usage percentage
+      write:
+        minimum: 75       # Minimum write capacity
+        maximum: 200      # Maximum write capacity
+        usage: 0.5        # Targeted usage percentage
   dynamodb:
     stages:
       - dev
@@ -157,21 +170,6 @@ functions:
 
 resources:
   Resources:
-    # DynamoDB Tables
-    CategoriesTable:
-      Type: "AWS::DynamoDB::Table"
-      Properties:
-        TableName: "categories"
-        KeySchema:
-          - AttributeName: "id"
-            KeyType: "HASH"
-        AttributeDefinitions:
-          - AttributeName: "id"
-            AttributeType: "S"
-        ProvisionedThroughput:
-          ReadCapacityUnits: 10
-          WriteCapacityUnits: 10
-
     BugatchiTable:
       Type: "AWS::DynamoDB::Table"
       Description: "Data Store for AWS AppSync Bugatchi Type"
@@ -180,18 +178,47 @@ resources:
         KeySchema:
           - AttributeName: "product_id"
             KeyType: "HASH"
+          - AttributeName: "category"
+            KeyType: "RANGE"
         AttributeDefinitions:
           - AttributeName: "product_id"
             AttributeType: "N"
+          - AttributeName: "category"
+            AttributeType: "S"
+          - AttributeName: "subcategory"
+            AttributeType: "S"
         ProvisionedThroughput:
-          ReadCapacityUnits: 10
-          WriteCapacityUnits: 60
+          ReadCapacityUnits: 25
+          WriteCapacityUnits: 75
+        GlobalSecondaryIndexes:
+          - IndexName: "CategoryIndex"
+            KeySchema:
+              - AttributeName: "category"
+                KeyType: "HASH"
+              - AttributeName: "subcategory"
+                KeyType: "RANGE"
+            Projection:
+              ProjectionType: "INCLUDE"
+              NonKeyAttributes:
+                - "name"
+                - "description"
+                - "sale_price"
+                - "retail_price"
+                - "productimage_url"
+            ProvisionedThroughput:
+              ReadCapacityUnits: 25
+              WriteCapacityUnits: 75
 
     S3BucketAthena:
       Type: AWS::S3::Bucket
       Properties:
         AccessControl: PublicReadWrite
         BucketName: "${self:provider.environment.ATHENA_S3_BUCKET}-${self:custom.stage}"
+        LifecycleConfiguration:
+          Rules:
+            - ExpirationInDays: 1
+              Status: Enabled
+              Prefix: "results/"
         CorsConfiguration:
           CorsRules:
             - AllowedHeaders: ['*']

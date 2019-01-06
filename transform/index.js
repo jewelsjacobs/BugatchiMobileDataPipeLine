@@ -62,10 +62,12 @@ let manufacturersQuery = `CREATE EXTERNAL TABLE \`manufacturers\`(
             TBLPROPERTIES (
             'classification'='csv')`;
 
+let deleteQuery = `DROP TABLE IF EXISTS manufacturers;`;
+
 exports.handler = async (event, context) => {
   console.log('Received event:', JSON.stringify(event, null, 2));
   console.log('remaining time =', context.getRemainingTimeInMillis());
-  let AthenaParams = {
+  const AthenaParams = {
     QueryString: manufacturersQuery,
     ResultConfiguration: {
       OutputLocation: `s3://${process.env.ATHENA_S3_BUCKET}-${process.env.STAGE}/results/`
@@ -74,7 +76,12 @@ exports.handler = async (event, context) => {
       Database: 'products'
     }
   };
+  const DeleteQueryString = {
+    QueryString: deleteQuery
+  };
+  const DeleteParams = {...AthenaParams, ...DeleteQueryString};
   try {
+    await athena.startQueryExecution(DeleteParams).promise();
     data = await athena.startQueryExecution(AthenaParams).promise();
     const params = {
       Message: data.QueryExecutionId,
