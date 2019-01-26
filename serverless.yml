@@ -122,6 +122,9 @@ provider:
         - sns:*
       Resource: "*"
 
+layers: # layer to update node to v11.7.0, see https://github.com/lambci/node-custom-lambda
+  nodeupdate:
+    path: arn:aws:lambda:us-east-1:553035198032:layer:nodejs11:6
 
 functions:
 
@@ -132,6 +135,8 @@ functions:
       sqs: transfer-dl-queue
     events:
       - schedule: cron(0 23 * * ? *)
+    layers:
+      - {Ref: NodeupdateLambdaLayer}
 
   transform:
     handler: transform/index.handler
@@ -143,6 +148,8 @@ functions:
           bucket: "${self:provider.environment.FTP_S3_BUCKET}-${self:custom.stage}"
           events:
             - s3:ObjectCreated:*
+    layers:
+      - {Ref: NodeupdateLambdaLayer}
 
   filter:
     handler: filter/index.handler
@@ -151,6 +158,8 @@ functions:
       sqs: filter-dl-queue
     events:
       - sns: transformQueryId
+    layers:
+      - {Ref: NodeupdateLambdaLayer}
 
   formatted:
     handler: formatted/index.handler
@@ -159,6 +168,8 @@ functions:
       sqs: formatted-dl-queue
     events:
       - sns: filterQueryId
+    layers:
+      - {Ref: NodeupdateLambdaLayer}
 
   import:
     handler: import/index.handler
@@ -167,6 +178,8 @@ functions:
       sqs: import-dl-queue
     events:
       - sns: formattedQueryId
+    layers:
+      - {Ref: NodeupdateLambdaLayer}
 
 resources:
   Resources:

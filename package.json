@@ -21,7 +21,7 @@
     "nodeunit": "^0.11.3",
     "serverless": "^1.30.3",
     "serverless-dynamodb-local": "^0.2.36",
-    "serverless-offline": "^3.25.11",
+    "serverless-offline": "^4.2.0",
     "serverless-offline-scheduler": "^0.3.4",
     "serverless-plugin-tracing": "^2.0.0",
     "serverless-s3-local": "^0.3.17"

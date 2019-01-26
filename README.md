@@ -23,6 +23,9 @@ Uses the [Serverless Framework](https://serverless.com/)
    - [serverless-offline](https://github.com/dherault/serverless-offline)
    - [serverless-s3-local](https://github.com/ar90n/serverless-s3-local)
    - [serverless-offline-sns](https://github.com/mj1618/serverless-offline-sns)
+   
+**Includes lambda layer for upgrading to node v11.7.0.**
+- See https://github.com/lambci/node-custom-lambda for custom runtime arns and https://serverless.com/framework/docs/providers/aws/guide/layers/ on using layers in the serverless framework.
 
 ## Setup
 
