@@ -151,22 +151,6 @@ functions:
     events:
       - sns: transformQueryId
 
-  categories:
-    handler: categories/index.handler
-    timeout: 720
-    deadLetter:
-      sqs: categories-dl-queue
-    events:
-      - sns: formattedQueryId
-
-  subcategories:
-    handler: subcategories/index.handler
-    timeout: 720
-    deadLetter:
-      sqs: subcategories-dl-queue
-    events:
-      - sns: categoriesQueryId
-
   formatted:
     handler: formatted/index.handler
     timeout: 360
@@ -182,6 +166,22 @@ functions:
       sqs: import-dl-queue
     events:
       - sns: formattedQueryId
+
+  categories:
+    handler: categories/index.handler
+    timeout: 720
+    deadLetter:
+      sqs: categories-dl-queue
+    events:
+      - sns: formattedQueryId
+
+  subcategories:
+    handler: subcategories/index.handler
+    timeout: 720
+    deadLetter:
+      sqs: subcategories-dl-queue
+    events:
+      - sns: categoriesQueryId
 
   create:
     handler: create/index.handler
