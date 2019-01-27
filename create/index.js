@@ -29,7 +29,7 @@ if (process.env.STAGE === 'local') {
 aws.config.update(awsConfig);
 const s3 = new aws.S3(s3Config);
 
-exports.handler = async (event, context) => {
+exports.handler = (event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
   console.log('Received event:', JSON.stringify(event, null, 2));
   console.log('remaining time =', context.getRemainingTimeInMillis());
