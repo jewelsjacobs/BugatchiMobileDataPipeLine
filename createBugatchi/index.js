@@ -33,7 +33,7 @@ let bugatchiQuery = `CREATE OR REPLACE VIEW bugatchi AS SELECT "product_id" ,
          "sku_number" ,
          "upc" ,
          split_part("secondary_category", '~~', 1) AS "category" , 
-         split_part("secondary_category", '~~', 2) AS "subcategory" , 
+         IF((split_part("secondary_category", '~~', 2) IS NULL), split_part("secondary_category", '~~', 1), split_part("secondary_category", '~~', 2)) "subcategory" , 
          replace("shipping_information", ':', ' ') AS "shipping_info",
          Coalesce(
          try(date_parse("begin_date", '%Y-%m-%d %H:%i:%s')),

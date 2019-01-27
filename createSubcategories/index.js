@@ -22,7 +22,7 @@ const sns = new aws.SNS(snsConfig);
 let data;
 let categoriesQuery = `CREATE OR REPLACE VIEW subcategories AS 
 SELECT
-  IF(("subcategory" IS NULL), "category", "subcategory") "subcategory"
+  "subcategory"
 , "category"
 FROM
   bugatchi
