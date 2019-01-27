@@ -65,8 +65,8 @@ exports.handler = async (event, context) => {
     data = await athena.startQueryExecution(AthenaParams).promise();
     const params = {
       Message: data.QueryExecutionId,
-      TopicArn: `arn:aws:sns:us-east-1:${process.env.AWS_ACCOUNT_ID}:filterQueryId`,
-      Subject: "Filter Query ID"
+      TopicArn: `arn:aws:sns:us-east-1:${process.env.AWS_ACCOUNT_ID}:createBugatchiQueryId`,
+      Subject: "Create Bugatchi Query ID"
     };
     await sns.publish(params).promise();
   } catch (err) {

@@ -47,8 +47,7 @@ exports.handler = (event, context) => {
         const params = {
           TableName : 'categories',
           Item: {
-            subcategory: json.subcategory,
-            category: json.category
+            categories: json.categories
           }
         };
         docClient.put(params, (err, savedCategory) => {

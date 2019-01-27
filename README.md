@@ -57,10 +57,18 @@ serverless s3deploy --stage dev
 
 Production:
 
-IMPORTANT - this won't work unless the Athena Settings have the s3 bucket defined as: `s3:\\bugatchi-athena-production\results`. I'd like to somehow make this dynamic but I haven't figured out how.
+IMPORTANT - this won't work unless the Athena Settings have the s3 bucket defined as: `s3:\\bugatchi-athena-dev\results`. I'd like to somehow make this dynamic but I haven't figured out how.
 
 ```bash
 serverless deploy --stage production
 serverless s3deploy --stage production
 
 ```
+
+## TODO
+
+DRY this up:
+
+- Put the create, select and import functions in a lib / layer along with the current provided runtime version of node.js (https://github.com/mthenw/awesome-layers)
+- Break up the `serverless.yml` into separate yml files
+- Minimize cost of PUT requests to S3 by using DynamoDB scans / puts to create categories and subcategories tables.

@@ -132,64 +132,88 @@ functions:
     events:
       - schedule: cron(0 23 * * ? *)
 
-  transform:
-    handler: transform/index.handler
+  createManufacturers:
+    handler: createManufacturers/index.handler
     timeout: 360
     deadLetter:
-      sqs: transform-dl-queue
+      sqs: createManufacturers-dl-queue
     events:
       - existingS3:
           bucket: "${self:provider.environment.FTP_S3_BUCKET}-${self:custom.stage}"
           events:
             - s3:ObjectCreated:*
 
-  filter:
-    handler: filter/index.handler
+  createBugatchi:
+    handler: createBugatchi/index.handler
     timeout: 720
     deadLetter:
-      sqs: filter-dl-queue
+      sqs: createBugatchi-dl-queue
     events:
-      - sns: transformQueryId
+      - sns: createManufacturersQueryId
 
-  formatted:
-    handler: formatted/index.handler
+  selectBugatchi:
+    handler: selectBugatchi/index.handler
     timeout: 360
     deadLetter:
-      sqs: formatted-dl-queue
+      sqs: selectBugatchi-dl-queue
     events:
-      - sns: filterQueryId
+      - sns: createBugatchiQueryId
 
-  import:
-    handler: import/index.handler
+  importBugatchi:
+    handler: importBugatchi/index.handler
     timeout: 720
     deadLetter:
-      sqs: import-dl-queue
+      sqs: importBugatchi-dl-queue
     events:
-      - sns: formattedQueryId
+      - sns: selectBugatchiQueryId
 
-  categories:
-    handler: categories/index.handler
+  createSubcategories:
+    handler: createSubcategories/index.handler
     timeout: 720
     deadLetter:
-      sqs: categories-dl-queue
+      sqs: createSubcategories-dl-queue
     events:
-      - sns: formattedQueryId
+      - sns: selectBugatchiQueryId
 
-  subcategories:
-    handler: subcategories/index.handler
+  selectSubcategories:
+    handler: selectSubcategories/index.handler
     timeout: 720
     deadLetter:
-      sqs: subcategories-dl-queue
+      sqs: selectSubcategories-dl-queue
     events:
-      - sns: categoriesQueryId
+      - sns: createSubcategoriesQueryId
 
-  create:
-    handler: create/index.handler
+  importSubcategories:
+    handler: importSubcategories/index.handler
     timeout: 720
     deadLetter:
-      sqs: create-dl-queue
+      sqs: importSubcategories-dl-queue
     events:
-      - sns: subcategoriesQueryId
+      - sns: selectSubcategoriesQueryId
+
+  createCategories:
+    handler: createCategories/index.handler
+    timeout: 720
+    deadLetter:
+      sqs: createCategories-dl-queue
+    events:
+      - sns: selectSubcategoriesQueryId
+
+  selectCategories:
+    handler: selectCategories/index.handler
+    timeout: 720
+    deadLetter:
+      sqs: selectCategories-dl-queue
+    events:
+      - sns: createCategoriesQueryId
+
+  importCategories:
+    handler: importCategories/index.handler
+    timeout: 720
+    deadLetter:
+      sqs: importCategories-dl-queue
+    events:
+      - sns: selectCategoriesQueryId
 
 resources:
   Resources:
@@ -232,11 +256,11 @@ resources:
               ReadCapacityUnits: 25
               WriteCapacityUnits: 75
 
-    CategoriesTable:
+    SubCategoriesTable:
       Type: "AWS::DynamoDB::Table"
-      Description: "Data Store for AWS AppSync Categories Type"
+      Description: "Data Store for AWS AppSync Subcategories Type"
       Properties:
-        TableName: "categories"
+        TableName: "subcategories"
         KeySchema:
           - AttributeName: "subcategory"
             KeyType: "HASH"
@@ -246,6 +270,21 @@ resources:
           - AttributeName: "subcategory"
             AttributeType: "S"
           - AttributeName: "category"
+            AttributeType: "S"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 25
+          WriteCapacityUnits: 25
+
+    CategoriesTable:
+      Type: "AWS::DynamoDB::Table"
+      Description: "Data Store for AWS AppSync Categories Type"
+      Properties:
+        TableName: "categories"
+        KeySchema:
+          - AttributeName: "categories"
+            KeyType: "HASH"
+        AttributeDefinitions:
+          - AttributeName: "categories"
             AttributeType: "S"
         ProvisionedThroughput:
           ReadCapacityUnits: 25
@@ -292,14 +331,17 @@ resources:
 
 package:
   include:
-    - categories/**
-    - subcategories/**
-    - create/**
-    - filter/**
-    - formatted/**
-    - import/**
     - transfer/**
-    - transform/**
+    - createManufacturers/**
+    - createBugatchi/**
+    - selectBugatchi/**
+    - importBugatchi/**
+    - createSubcategories/**
+    - selectSubcategories/**
+    - importSubcategories/**
+    - createCategories/**
+    - selectCategories/**
+    - importCategories/**
   exclude:
     - docker-compose.yml
     - README.md

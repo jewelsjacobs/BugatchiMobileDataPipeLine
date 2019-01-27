@@ -20,14 +20,7 @@ if (process.env.STAGE === 'local') {
 const sns = new aws.SNS(snsConfig);
 
 let data;
-let categoriesQuery = `CREATE OR REPLACE VIEW categories AS 
-SELECT
-  IF(("subcategory" IS NULL), "category", "subcategory") "subcategory"
-, "category"
-FROM
-  bugatchi
-GROUP BY "category", "subcategory"
-ORDER BY "category" ASC`;
+let categoriesQuery = `SELECT * FROM "products"."categories"`;
 
 exports.handler = async (event, context) => {
   console.log('Received event:', JSON.stringify(event, null, 2));
@@ -45,8 +38,8 @@ exports.handler = async (event, context) => {
     data = await athena.startQueryExecution(AthenaParams).promise();
     const params = {
       Message: data.QueryExecutionId,
-      TopicArn: `arn:aws:sns:us-east-1:${process.env.AWS_ACCOUNT_ID}:categoriesQueryId`,
-      Subject: "Categories Query ID"
+      TopicArn: `arn:aws:sns:us-east-1:${process.env.AWS_ACCOUNT_ID}:selectCategoriesQueryId`,
+      Subject: "Select Categories Query ID"
     };
     await sns.publish(params).promise();
   } catch (err) {
