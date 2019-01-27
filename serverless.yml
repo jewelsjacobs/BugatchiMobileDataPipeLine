@@ -151,6 +151,22 @@ functions:
     events:
       - sns: transformQueryId
 
+  categories:
+    handler: categories/index.handler
+    timeout: 720
+    deadLetter:
+      sqs: categories-dl-queue
+    events:
+      - sns: formattedQueryId
+
+  subcategories:
+    handler: subcategories/index.handler
+    timeout: 720
+    deadLetter:
+      sqs: subcategories-dl-queue
+    events:
+      - sns: categoriesQueryId
+
   formatted:
     handler: formatted/index.handler
     timeout: 360
@@ -167,6 +183,14 @@ functions:
     events:
       - sns: formattedQueryId
 
+  create:
+    handler: create/index.handler
+    timeout: 720
+    deadLetter:
+      sqs: create-dl-queue
+    events:
+      - sns: subcategoriesQueryId
+
 resources:
   Resources:
     BugatchiTable:
@@ -181,7 +205,7 @@ resources:
             KeyType: "RANGE"
         AttributeDefinitions:
           - AttributeName: "product_id"
-            AttributeType: "N"
+            AttributeType: "S"
           - AttributeName: "category"
             AttributeType: "S"
           - AttributeName: "subcategory"
@@ -207,6 +231,25 @@ resources:
             ProvisionedThroughput:
               ReadCapacityUnits: 25
               WriteCapacityUnits: 75
+
+    CategoriesTable:
+      Type: "AWS::DynamoDB::Table"
+      Description: "Data Store for AWS AppSync Categories Type"
+      Properties:
+        TableName: "categories"
+        KeySchema:
+          - AttributeName: "subcategory"
+            KeyType: "HASH"
+          - AttributeName: "category"
+            KeyType: "RANGE"
+        AttributeDefinitions:
+          - AttributeName: "subcategory"
+            AttributeType: "S"
+          - AttributeName: "category"
+            AttributeType: "S"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 25
+          WriteCapacityUnits: 25
 
     S3BucketAthena:
       Type: AWS::S3::Bucket
@@ -249,6 +292,9 @@ resources:
 
 package:
   include:
+    - categories/**
+    - subcategories/**
+    - create/**
     - filter/**
     - formatted/**
     - import/**

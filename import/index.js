@@ -126,14 +126,9 @@ function buildRequestParams(batch) {
   params.RequestItems['bugatchi'] = batch.map(obj => {
     return obj.map(innerObj => {
       let item = {};
-      const numberFeilds = ["product_id", "manufacturer_part_number"];
       CSV_KEYS.forEach((keyName) => {
         if (innerObj[keyName] && innerObj[keyName].length > 0) {
-          if (numberFeilds.indexOf(keyName) !== -1) {
-            item[keyName] = parseInt(innerObj[keyName], 10)
-          } else {
             item[keyName] = innerObj[keyName]
-          }
         }
       });
       return {
